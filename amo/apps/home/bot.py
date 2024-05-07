@@ -55,11 +55,14 @@ def telegram_webhook(request, pk):
         return JsonResponse({"status": "error", "message": "Только Post Запросы"})
 
 
-def generate_response(input_text):
+def generate_response(company, employee_response, openai_api_key):
+    prompt = (f"Ты сотрудник {company.name}, которая занимается {company.business}. Тебе нужно ответить на вопрос "
+              f"клиента: {employee_response}")
+    openai.api_key = openai_api_key
     response = openai.Completion.create(
         engine="text-davinci-003",
-        prompt=input_text,
-        max_tokens=50
+        prompt=prompt,
+        max_tokens=200
     )
     return response.choices[0].text.strip()
 
