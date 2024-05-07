@@ -1,6 +1,6 @@
 from django.urls import path
-from . import views
+from . import views, bot
 
 urlpatterns = [
-    path('webhook/', views.telegram_webhook, name='telegram_webhook'),
+    path('webhook/<int:pk>/', bot.telegram_webhook, name='company_detail')
 ]

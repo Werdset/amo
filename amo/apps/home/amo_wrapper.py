@@ -1,15 +1,16 @@
 import requests
-from .utils import setup_amocrm
+from .models import Company
 
 
 class AmoCRMWrapper:
-
-    base_url = setup_amocrm.base_url
-    client_id = setup_amocrm.client_id
-    client_secret = setup_amocrm.client_secret
-    redirect_uri = setup_amocrm.redirect_uri
-    access_token = None
-    refresh_token = None
+    def __init__(self, company_id):
+        company = Company.objects.get(pk=company_id)
+        self.base_url = company.amo_base_url
+        self.client_id = company.amo_client_id
+        self.client_secret = company.amo_client_secret
+        self.redirect_uri = company.amo_redirect_url
+        self.access_token = company.amo_access_token
+        self.refresh_token = company.amo_refresh_token
 
     def authenticate(self, code):
         auth_url = f"{self.base_url}/oauth2/access_token"
