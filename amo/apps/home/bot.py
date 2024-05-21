@@ -15,38 +15,36 @@ openai.api_key = settings.OPENAI_API_KEY
 def telegram_webhook(request, pk):
     company = Company.objects.get(pk=pk)
     if request.method == "POST":
+        data = json.loads(request.body)
+        # Проверяем, есть ли в данных сообщение
+        if 'message' in data:
+            update = data['message']
 
-        if request.method == 'POST':
-            data = json.loads(request.body)
-            # Проверяем, есть ли в данных сообщение
-            if 'message' in data:
-                update = data['message']
+            # Проверяем, есть ли в сообщении текстовое сообщение
+            if 'text' in update:
+                # Если текст - '/start', вызываем функцию handle_start
+                if update['text'] == '/start':
+                    handle_start(update, pk)
+                elif update['text'] == '/settings':
+                    setting(update, pk)
+                # Проверяем, есть ли в сообщении видео
+                elif update['text'] == f'{company.create_deal}':
+                    create_deal(update, pk)
+                elif update['text'] == f'{company.create_contact}':
+                    create_contact(update, pk)
+                elif update['text'].startswith('<'):
+                    contacty(update, pk)
+                else:
+                    generate_response(update, pk)
 
-                # Проверяем, есть ли в сообщении текстовое сообщение
-                if 'text' in update:
-                    # Если текст - '/start', вызываем функцию handle_start
-                    if update['text'] == '/start':
-                        handle_start(update, pk)
-                    elif update['text'] == '/settings':
-                        setting(update, pk)
-                    # Проверяем, есть ли в сообщении видео
-                    elif update['text'] == f'{company.create_deal}':
-                        create_deal(update, pk)
-                    elif update['text'] == f'{company.create_contact}':
-                        create_contact(update, pk)
-                    elif update['text'].startswith('<'):
-                        contacty(update, pk)
-                    else:
-                        generate_response(update, pk)
-
-                # Возвращаем ответ серверу Telegram
-                return HttpResponse('Got it!')
-            else:
-                # Если сообщение не содержит обновлений, возвращаем ошибку
-                return HttpResponse('No updates found')
+            # Возвращаем ответ серверу Telegram
+            return HttpResponse('Got it!')
         else:
-            # Если метод запроса не POST, возвращаем ошибку
-            return HttpResponse('Only POST requests are allowed')
+            # Если сообщение не содержит обновлений, возвращаем ошибку
+            return HttpResponse('No updates found')
+    else:
+        # Если метод запроса не POST, возвращаем ошибку
+        return HttpResponse('Only POST requests are allowed')
 
 
 def handle_start(update, pk):
