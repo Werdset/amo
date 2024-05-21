@@ -1,17 +1,17 @@
 import json
 import os
-from django.http import HttpResponse
+from django.http import JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 import openai
 import requests
-from amocrm.v2 import Contact, Lead, tokens
-from .models import Company
+from amocrm.v2 import Contact, Company as Comp, Lead, tokens
+from .models import Company, OpenAi
 from django.conf import settings
 
 openai.api_key = settings.OPENAI_API_KEY
 
 
-@csrf_exempt  # обработчик webhooks
+@csrf_exempt
 def telegram_webhook(request, pk):
     company = Company.objects.get(pk=pk)
     if request.method == "POST":
@@ -27,19 +27,15 @@ def telegram_webhook(request, pk):
                     # Если текст - '/start', вызываем функцию handle_start
                     if update['text'] == '/start':
                         handle_start(update, pk)
-                        # Если текст - '/start', вызываем функцию
                     elif update['text'] == '/settings':
                         setting(update, pk)
-                    # Проверяем, есть ли ключевое слово для создания сделки
+                    # Проверяем, есть ли в сообщении видео
                     elif update['text'] == f'{company.create_deal}':
                         create_deal(update, pk)
-                    # Проверяем, есть ли ключевое слово для создания контакта
                     elif update['text'] == f'{company.create_contact}':
                         create_contact(update, pk)
-                        # Проверяем, есть ли данные для создания контакта
                     elif update['text'].startswith('<'):
                         contacty(update, pk)
-                        # если ключевых слов нет, отправляем в чат GPT
                     else:
                         generate_response(update, pk)
 
@@ -85,6 +81,7 @@ def create_deal(update, pk):
 def contacty(update, pk):
     company = Company.objects.get(pk=pk)
     bot_token = company.telegram_bot_token
+    # Аутентификация компании
 
     # Обработка данных о контакте
     parts = update['text'].split()
@@ -120,7 +117,6 @@ def create_contact(update, pk):
     requests.post(f'https://api.telegram.org/bot{bot_token}/sendMessage', json=response)
 
 
-# обработка перед отправкой в openai и отправка возвращенного ответа
 def generate_response(update, pk):
     company = Company.objects.get(pk=pk)
     name = company.name
@@ -137,17 +133,22 @@ def generate_response(update, pk):
     requests.post(f'https://api.telegram.org/bot{bot_token}/sendMessage', json=response_data)
 
 
-# отправка запроса в openai  и возврат ответа
 def openai_generate(text):
     try:
         response = openai.chat.completions.create(
+            model="gpt-4",
             messages=[
+
+                {
+                    "role": "system",
+                    "content": "Ты - ИИ-турагент, задача которого состоит в первичной квалификации обращений. Твоя задача узнать в какую страну и город хочет полететь клиент, какой у него бюджет, из какого города он будет вылетать, на сколько дней он планирует поездку, какие даты вылета клиент рассматривает удобными для него, сколько человек летит вместе с ним и есть ли у него дети которые полетят с ним, а также дополнительные пожелания. После чего на основе полученных данных найти подходящие варианты туров на сайте https://tourvisor.ru/ и предоставить их клиенту."
+                },
                 {
                     "role": "user",
                     "content": text
                 }
             ],
-            model="gpt-3.5-turbo-1106",
+
         )
 
         return response.choices[0].message.content
